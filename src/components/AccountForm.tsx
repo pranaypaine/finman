@@ -3,7 +3,7 @@
  * Add or edit bank accounts and credit cards
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -17,8 +17,9 @@ import {
 } from 'react-native';
 import {Button, Input} from './UI';
 import {useForm} from '@hooks';
-import {createAccount} from '@services/accounts';
+import {createAccount, updateAccount} from '@services/accounts';
 import {AccountType} from '@types';
+import type {Account} from '@types';
 
 interface AccountFormData {
   name: string;
@@ -32,23 +33,45 @@ interface AccountFormData {
 
 interface AccountFormProps {
   visible: boolean;
+  account?: Account | null; // For editing
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function AccountForm({visible, onClose, onSuccess}: AccountFormProps) {
+export function AccountForm({visible, account, onClose, onSuccess}: AccountFormProps) {
   const [saving, setSaving] = useState(false);
   const [isCreditCard, setIsCreditCard] = useState(false);
 
-  const {values, errors, handleChange, setFieldError, reset} = useForm<AccountFormData>({
-    name: '',
-    type: AccountType.BANK,
-    bankName: '',
-    last4: '',
-    creditLimit: '',
-    statementDay: '',
-    dueDay: '',
-  });
+  const {values, errors, handleChange, setFieldError, reset, setValues} =
+    useForm<AccountFormData>({
+      name: '',
+      type: AccountType.BANK,
+      bankName: '',
+      last4: '',
+      creditLimit: '',
+      statementDay: '',
+      dueDay: '',
+    });
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (account) {
+      const isCC = account.type === AccountType.CREDIT_CARD;
+      setIsCreditCard(isCC);
+      setValues({
+        name: account.name,
+        type: account.type,
+        bankName: account.bankName,
+        last4: account.last4,
+        creditLimit: account.creditLimit ? (account.creditLimit / 100).toFixed(0) : '',
+        statementDay: account.statementDay ? account.statementDay.toString() : '',
+        dueDay: account.dueDay ? account.dueDay.toString() : '',
+      });
+    } else {
+      reset();
+      setIsCreditCard(false);
+    }
+  }, [account, visible]);
 
   const validate = (): boolean => {
     let isValid = true;
@@ -98,7 +121,7 @@ export function AccountForm({visible, onClose, onSuccess}: AccountFormProps) {
     try {
       setSaving(true);
 
-      await createAccount({
+      const accountData = {
         name: values.name.trim(),
         type: isCreditCard ? AccountType.CREDIT_CARD : AccountType.BANK,
         bankName: values.bankName.trim(),
@@ -106,15 +129,29 @@ export function AccountForm({visible, onClose, onSuccess}: AccountFormProps) {
         creditLimit: isCreditCard ? Math.round(parseFloat(values.creditLimit) * 100) : undefined,
         statementDay: isCreditCard ? parseInt(values.statementDay) : undefined,
         dueDay: isCreditCard ? parseInt(values.dueDay) : undefined,
-      });
+      };
 
-      Alert.alert('Success', 'Account added successfully');
+      if (account) {
+        // Update existing account
+        await updateAccount(account.id, accountData);
+        Alert.alert('Success', 'Account updated successfully');
+      } else {
+        // Create new account
+        await createAccount(accountData);
+        Alert.alert('Success', 'Account added successfully');
+      }
+
       reset();
       setIsCreditCard(false);
       onSuccess();
       onClose();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to add account');
+      Alert.alert(
+        'Error',
+        error instanceof Error
+          ? error.message
+          : `Failed to ${account ? 'update' : 'add'} account`,
+      );
     } finally {
       setSaving(false);
     }
@@ -138,7 +175,7 @@ export function AccountForm({visible, onClose, onSuccess}: AccountFormProps) {
           <TouchableOpacity onPress={handleClose}>
             <Text style={styles.headerButton}>Cancel</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Account</Text>
+          <Text style={styles.headerTitle}>{account ? 'Edit Account' : 'Add Account'}</Text>
           <View style={styles.headerButtonPlaceholder} />
         </View>
 
@@ -213,7 +250,7 @@ export function AccountForm({visible, onClose, onSuccess}: AccountFormProps) {
           )}
 
           <Button
-            title="Add Account"
+            title={account ? 'Update Account' : 'Add Account'}
             onPress={handleSubmit}
             loading={saving}
             disabled={saving}

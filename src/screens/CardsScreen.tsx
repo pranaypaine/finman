@@ -4,19 +4,72 @@
  */
 
 import React, {useState} from 'react';
-import {View, Text, StyleSheet, ScrollView, FlatList, RefreshControl} from 'react-native';
+import {View, Text, StyleSheet, ScrollView, RefreshControl, Alert} from 'react-native';
 import {useAccounts} from '@hooks';
 import {AccountForm} from '@components/AccountForm';
 import {Card, EmptyState, Loading, ErrorDisplay, Button} from '@components/UI';
 import {AccountType} from '@types';
+import type {Account} from '@types';
 import {formatCurrency} from '@utils';
+import * as AccountService from '@services/accounts';
 
 function CardsScreen() {
   const {accounts, loading, error, refresh} = useAccounts();
   const [showForm, setShowForm] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   const creditCards = accounts.filter(a => a.type === AccountType.CREDIT_CARD);
   const bankAccounts = accounts.filter(a => a.type === AccountType.BANK);
+
+  const handleAccountPress = (account: Account) => {
+    Alert.alert(
+      account.name,
+      `${account.bankName}\n•••• ${account.last4}${account.creditLimit ? `\nCredit Limit: ${formatCurrency(account.creditLimit)}` : ''}`,
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Edit',
+          onPress: () => {
+            setEditingAccount(account);
+            setShowForm(true);
+          },
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => handleDeleteAccount(account),
+        },
+      ],
+    );
+  };
+
+  const handleDeleteAccount = (account: Account) => {
+    Alert.alert(
+      'Delete Account',
+      `Are you sure you want to delete ${account.name}? This action cannot be undone.`,
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AccountService.deleteAccount(account.id);
+              refresh();
+            } catch (error) {
+              console.error('Error deleting account:', error);
+              Alert.alert('Error', 'Failed to delete account');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+    setEditingAccount(null);
+  };
 
   if (loading && accounts.length === 0) {
     return <Loading message="Loading accounts..." />;
@@ -38,7 +91,11 @@ function CardsScreen() {
             onPress: () => setShowForm(true),
           }}
         />
-        <AccountForm visible={showForm} onClose={() => setShowForm(false)} onSuccess={refresh} />
+        <AccountForm
+          visible={showForm}
+          onClose={handleFormClose}
+          onSuccess={refresh}
+        />
       </View>
     );
   }
@@ -52,7 +109,10 @@ function CardsScreen() {
           <>
             <Text style={styles.sectionTitle}>Credit Cards</Text>
             {creditCards.map(card => (
-              <Card key={card.id} style={styles.accountCard}>
+              <Card
+                key={card.id}
+                style={styles.accountCard}
+                onPress={() => handleAccountPress(card)}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardIcon}>💳</Text>
                   <View style={styles.cardInfo}>
@@ -61,6 +121,7 @@ function CardsScreen() {
                       {card.bankName} •••• {card.last4}
                     </Text>
                   </View>
+                  <Text style={styles.editHint}>Tap to edit</Text>
                 </View>
 
                 {card.creditLimit && (
@@ -92,7 +153,10 @@ function CardsScreen() {
           <>
             <Text style={styles.sectionTitle}>Bank Accounts</Text>
             {bankAccounts.map(account => (
-              <Card key={account.id} style={styles.accountCard}>
+              <Card
+                key={account.id}
+                style={styles.accountCard}
+                onPress={() => handleAccountPress(account)}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.cardIcon}>🏦</Text>
                   <View style={styles.cardInfo}>
@@ -101,6 +165,7 @@ function CardsScreen() {
                       {account.bankName} •••• {account.last4}
                     </Text>
                   </View>
+                  <Text style={styles.editHint}>Tap to edit</Text>
                 </View>
               </Card>
             ))}
@@ -115,7 +180,12 @@ function CardsScreen() {
         />
       </View>
 
-      <AccountForm visible={showForm} onClose={() => setShowForm(false)} onSuccess={refresh} />
+      <AccountForm
+        visible={showForm}
+        account={editingAccount}
+        onClose={handleFormClose}
+        onSuccess={refresh}
+      />
     </ScrollView>
   );
 }
@@ -159,6 +229,11 @@ const styles = StyleSheet.create({
   cardDetails: {
     fontSize: 14,
     color: '#8E8E93',
+  },
+  editHint: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '500',
   },
   cardStats: {
     flexDirection: 'row',

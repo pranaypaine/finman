@@ -1,9 +1,9 @@
 /**
  * Transaction Form Component
- * Allows users to manually add transactions
+ * Allows users to manually add or edit transactions
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,9 @@ import {
 } from 'react-native';
 import {Button, Input} from './UI';
 import {useForm, useAccounts} from '@hooks';
-import {createTransaction} from '@services/transactions';
+import {createTransaction, updateTransaction} from '@services/transactions';
 import {Category, TransactionSource} from '@types';
+import type {Transaction} from '@types';
 import {formatCurrency, parseCurrency} from '@utils';
 
 interface TransactionFormData {
@@ -31,6 +32,7 @@ interface TransactionFormData {
 
 interface TransactionFormProps {
   visible: boolean;
+  transaction?: Transaction | null; // For editing
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -48,20 +50,37 @@ const CATEGORIES = [
   {value: Category.OTHERS, label: '📦 Others'},
 ];
 
-export function TransactionForm({visible, onClose, onSuccess}: TransactionFormProps) {
+export function TransactionForm({visible, transaction, onClose, onSuccess}: TransactionFormProps) {
   const {accounts, loading: accountsLoading} = useAccounts();
   const [saving, setSaving] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
 
-  const {values, errors, handleChange, setFieldError, reset} = useForm<TransactionFormData>({
-    amount: '',
-    merchant: '',
-    category: Category.UNCATEGORIZED,
-    accountId: '',
-    notes: '',
-    date: new Date(),
-  });
+  const {values, errors, handleChange, setFieldError, reset, setValues} =
+    useForm<TransactionFormData>({
+      amount: '',
+      merchant: '',
+      category: Category.UNCATEGORIZED,
+      accountId: '',
+      notes: '',
+      date: new Date(),
+    });
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (transaction) {
+      setValues({
+        amount: (transaction.amount / 100).toFixed(2),
+        merchant: transaction.merchant,
+        category: transaction.category as Category,
+        accountId: transaction.accountId,
+        notes: transaction.notes || '',
+        date: new Date(transaction.transactionDate),
+      });
+    } else {
+      reset();
+    }
+  }, [transaction, visible]);
 
   const selectedCategory = CATEGORIES.find(c => c.value === values.category);
   const selectedAccount = accounts.find(a => a.id === values.accountId);
@@ -98,22 +117,43 @@ export function TransactionForm({visible, onClose, onSuccess}: TransactionFormPr
       // Parse amount to cents
       const amountInCents = parseCurrency(values.amount);
 
-      await createTransaction({
-        accountId: values.accountId,
-        amount: amountInCents,
-        merchant: values.merchant.trim(),
-        category: values.category,
-        transactionDate: values.date,
-        source: TransactionSource.MANUAL,
-        notes: values.notes.trim() || undefined,
-      });
+      if (transaction) {
+        // Update existing transaction
+        await updateTransaction(transaction.id, {
+          accountId: values.accountId,
+          amount: amountInCents,
+          merchant: values.merchant.trim(),
+          category: values.category,
+          transactionDate: values.date,
+          notes: values.notes.trim() || undefined,
+        });
 
-      Alert.alert('Success', 'Transaction added successfully');
+        Alert.alert('Success', 'Transaction updated successfully');
+      } else {
+        // Create new transaction
+        await createTransaction({
+          accountId: values.accountId,
+          amount: amountInCents,
+          merchant: values.merchant.trim(),
+          category: values.category,
+          transactionDate: values.date,
+          source: TransactionSource.MANUAL,
+          notes: values.notes.trim() || undefined,
+        });
+
+        Alert.alert('Success', 'Transaction added successfully');
+      }
+
       reset();
       onSuccess();
       onClose();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to add transaction');
+      Alert.alert(
+        'Error',
+        error instanceof Error
+          ? error.message
+          : `Failed to ${transaction ? 'update' : 'add'} transaction`,
+      );
     } finally {
       setSaving(false);
     }
@@ -131,7 +171,9 @@ export function TransactionForm({visible, onClose, onSuccess}: TransactionFormPr
           <TouchableOpacity onPress={handleClose}>
             <Text style={styles.headerButton}>Cancel</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Transaction</Text>
+          <Text style={styles.headerTitle}>
+            {transaction ? 'Edit Transaction' : 'Add Transaction'}
+          </Text>
           <View style={styles.headerButtonPlaceholder} />
         </View>
 
@@ -195,7 +237,7 @@ export function TransactionForm({visible, onClose, onSuccess}: TransactionFormPr
           />
 
           <Button
-            title="Add Transaction"
+            title={transaction ? 'Update Transaction' : 'Add Transaction'}
             onPress={handleSubmit}
             loading={saving}
             disabled={saving || accountsLoading}
