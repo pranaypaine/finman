@@ -38,8 +38,10 @@ export async function createBudget(
  */
 export async function getBudgetById(id: string): Promise<Budget | null> {
   const db = getDb();
-  const [budget] = await db.select().from(budgets).where(eq(budgets.id, id));
-  return (budget as Budget) || null;
+  const result = await db.select().from(budgets).where(eq(budgets.id, id));
+  const budget = result[0];
+  if (!budget) return null;
+  return budget as unknown as Budget;
 }
 
 /**
@@ -47,8 +49,10 @@ export async function getBudgetById(id: string): Promise<Budget | null> {
  */
 export async function getBudgetByCategory(category: Category): Promise<Budget | null> {
   const db = getDb();
-  const [budget] = await db.select().from(budgets).where(eq(budgets.category, category));
-  return (budget as Budget) || null;
+  const result = await db.select().from(budgets).where(eq(budgets.category, category));
+  const budget = result[0];
+  if (!budget) return null;
+  return budget as unknown as Budget;
 }
 
 /**
@@ -105,11 +109,10 @@ export async function getBudgetProgress(category: Category): Promise<BudgetProgr
   const remaining = Math.max(0, budget.monthlyLimit - spent);
   const percentage = Math.min(100, Math.round((spent / budget.monthlyLimit) * 100));
 
+  // Database returns category as string, but we know it's a valid Category enum
   return {
-    budget: {
-      ...budget,
-      category: budget.category as Category,
-    } as Budget,
+    // @ts-expect-error: database string type vs enum type
+    budget,
     spent,
     remaining,
     percentage,
