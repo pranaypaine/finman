@@ -8,6 +8,7 @@ import {View, Text, StyleSheet, ScrollView, RefreshControl} from 'react-native';
 import {useMonthlySpend, useBudgetStatus, useCardUtilization, useRecentTransactions} from '@hooks';
 import {TransactionCard} from '@components/TransactionCard';
 import {Card, Loading} from '@components/UI';
+import {SpendingTrendChart, CategoryPieChart} from '@components/charts';
 import {formatCurrency} from '@utils';
 
 function DashboardScreen() {
@@ -97,6 +98,10 @@ function DashboardScreen() {
             </View>
           )}
         </Card>
+
+        {/* Charts Section */}
+        <SpendingTrendChart />
+        <CategoryPieChart />
 
         <Card style={styles.card}>
           <Text style={styles.cardTitle}>Recent Transactions</Text>

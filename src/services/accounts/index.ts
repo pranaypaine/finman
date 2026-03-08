@@ -102,3 +102,33 @@ export async function getAccountCount(): Promise<number> {
   const result = await db.select().from(accounts);
   return result.length;
 }
+/**
+ * Calculate credit card utilization percentage for a specific card
+ */
+export async function getCreditCardUtilization(accountId: string): Promise<number> {
+  const db = getDb();
+  const account = await getAccountById(accountId);
+  if (!account || account.type !== 'credit_card' || !account.creditLimit) {
+    return 0;
+  }
+
+  const now = new Date();
+  const statementDate = account.statementDay
+    ? new Date(now.getFullYear(), now.getMonth(), account.statementDay)
+    : new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // If statement day hasn't occurred this month, use last month
+  if (statementDate > now) {
+    statementDate.setMonth(statementDate.getMonth() - 1);
+  }
+
+  // Import here to avoid circular dependency
+  const {getTransactionsByAccount} = await import('@services/transactions');
+  const allTransactions = await getTransactionsByAccount(accountId);
+  const relevantTransactions = allTransactions.filter(
+    (t: any) => new Date(t.transactionDate) >= statementDate,
+  );
+
+  const balance = relevantTransactions.reduce((sum: number, t: any) => sum + t.amount, 0);
+  return Math.round((balance / account.creditLimit) * 100);
+}

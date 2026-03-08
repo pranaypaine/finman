@@ -15,6 +15,7 @@ import {
 import {NavigationContainer} from '@react-navigation/native';
 import {initializeDatabase} from '@database/db';
 import {configureGoogleSignIn} from '@services/email';
+import * as NotificationService from '@services/notifications';
 import RootNavigator from '@navigation/RootNavigator';
 
 function App(): React.JSX.Element {
@@ -31,6 +32,15 @@ function App(): React.JSX.Element {
         // Configure Google Sign-In for Gmail integration
         configureGoogleSignIn();
         console.log('Gmail integration configured');
+        
+        // Configure notifications
+        NotificationService.configureNotifications();
+        await NotificationService.requestNotificationPermissions();
+        console.log('Notifications configured');
+        
+        // Schedule daily alert checks
+        NotificationService.scheduleDailyAlerts();
+        console.log('Daily alerts scheduled');
         
         setIsReady(true);
       } catch (err) {
