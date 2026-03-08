@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {initializeDatabase} from '@database/db';
+import {configureGoogleSignIn} from '@services/email';
 import RootNavigator from '@navigation/RootNavigator';
 
 function App(): React.JSX.Element {
@@ -26,6 +27,11 @@ function App(): React.JSX.Element {
         console.log('Initializing FinTrack AI...');
         await initializeDatabase();
         console.log('Database initialized successfully');
+        
+        // Configure Google Sign-In for Gmail integration
+        configureGoogleSignIn();
+        console.log('Gmail integration configured');
+        
         setIsReady(true);
       } catch (err) {
         console.error('Initialization failed:', err);

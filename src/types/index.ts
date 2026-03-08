@@ -10,6 +10,7 @@ export enum AccountType {
 export enum TransactionSource {
   EMAIL = 'email',
   MANUAL = 'manual',
+  SMS = 'sms',
 }
 
 export enum RecurringFrequency {
