@@ -72,3 +72,12 @@ yarn-error.log
 *.db
 *.db-shm
 *.db-wal
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# EAS
+eas.json
