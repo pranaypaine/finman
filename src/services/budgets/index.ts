@@ -30,7 +30,7 @@ export async function createBudget(
 
   const [created] = await db.select().from(budgets).where(eq(budgets.id, id));
 
-  return created;
+  return created as Budget;
 }
 
 /**
@@ -39,7 +39,7 @@ export async function createBudget(
 export async function getBudgetById(id: string): Promise<Budget | null> {
   const db = getDb();
   const [budget] = await db.select().from(budgets).where(eq(budgets.id, id));
-  return budget || null;
+  return (budget as Budget) || null;
 }
 
 /**
@@ -48,7 +48,7 @@ export async function getBudgetById(id: string): Promise<Budget | null> {
 export async function getBudgetByCategory(category: Category): Promise<Budget | null> {
   const db = getDb();
   const [budget] = await db.select().from(budgets).where(eq(budgets.category, category));
-  return budget || null;
+  return (budget as Budget) || null;
 }
 
 /**
@@ -56,7 +56,8 @@ export async function getBudgetByCategory(category: Category): Promise<Budget | 
  */
 export async function getAllBudgets(): Promise<Budget[]> {
   const db = getDb();
-  return db.select().from(budgets);
+  const results = await db.select().from(budgets);
+  return results as Budget[];
 }
 
 /**
@@ -72,7 +73,7 @@ export async function updateBudget(
 
   const [updated] = await db.select().from(budgets).where(eq(budgets.id, id));
 
-  return updated;
+  return updated as Budget;
 }
 
 /**
@@ -105,7 +106,10 @@ export async function getBudgetProgress(category: Category): Promise<BudgetProgr
   const percentage = Math.min(100, Math.round((spent / budget.monthlyLimit) * 100));
 
   return {
-    budget,
+    budget: {
+      ...budget,
+      category: budget.category as Category,
+    } as Budget,
     spent,
     remaining,
     percentage,

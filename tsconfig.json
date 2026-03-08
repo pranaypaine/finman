@@ -22,7 +22,7 @@
       "@database/*": ["src/database/*"],
       "@types": ["src/types"],
       "@utils": ["src/utils"],
-      "@hooks/*": ["src/hooks/*"],
+      "@hooks": ["src/hooks"],
       "@ai/*": ["src/ai/*"],
       "@navigation/*": ["src/navigation/*"]
     },

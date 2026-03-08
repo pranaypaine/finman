@@ -3,7 +3,7 @@
  * Uses SQLite with encryption support via SQLCipher
  */
 
-import SQLite from 'react-native-sqlite-storage';
+import SQLite, {SQLiteDatabase} from 'react-native-sqlite-storage';
 import {drizzle} from 'drizzle-orm/sqlite-proxy';
 import * as Keychain from 'react-native-keychain';
 import * as schema from './schema';
@@ -15,7 +15,7 @@ SQLite.enablePromise(true);
 const DB_NAME = 'fintrack.db';
 const ENCRYPTION_KEY_SERVICE = 'fintrack-db-encryption';
 
-let dbInstance: SQLite.SQLiteDatabase | null = null;
+let dbInstance: SQLiteDatabase | null = null;
 let drizzleInstance: ReturnType<typeof drizzle> | null = null;
 
 /**
