@@ -1,15 +1,14 @@
 {
-  "extends": "@react-native/typescript-config/tsconfig.json",
   "compilerOptions": {
     "target": "esnext",
     "module": "commonjs",
-    "lib": ["es2017"],
+    "lib": ["es2017", "es2020"],
     "allowJs": true,
     "jsx": "react-native",
     "noEmit": true,
     "isolatedModules": true,
     "strict": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -21,12 +20,15 @@
       "@screens/*": ["src/screens/*"],
       "@services/*": ["src/services/*"],
       "@database/*": ["src/database/*"],
-      "@types/*": ["src/types/*"],
-      "@utils/*": ["src/utils/*"],
+      "@types": ["src/types"],
+      "@utils": ["src/utils"],
       "@hooks/*": ["src/hooks/*"],
-      "@ai/*": ["src/ai/*"]
-    }
+      "@ai/*": ["src/ai/*"],
+      "@navigation/*": ["src/navigation/*"]
+    },
+    "types": ["react-native", "jest"],
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "App.tsx", "index.js"],
   "exclude": ["node_modules", "babel.config.js", "metro.config.js", "jest.config.js"]
 }
