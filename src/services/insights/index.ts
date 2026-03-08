@@ -30,17 +30,20 @@ export async function generateAllInsights(): Promise<AIInsight[]> {
     budgetInsights,
     utilizationInsights,
     subscriptionInsights,
+    forecastInsights,
   ] = await Promise.all([
     detectSpendSpike(),
     detectBudgetIssues(),
     detectHighUtilization(),
     detectSubscriptions(),
+    generateSpendForecast(),
   ]);
 
   insights.push(...spendSpikeInsights);
   insights.push(...budgetInsights);
   insights.push(...utilizationInsights);
   insights.push(...subscriptionInsights);
+  insights.push(...forecastInsights);
 
   // Save insights to database
   const savedInsights: AIInsight[] = [];
@@ -358,6 +361,98 @@ async function detectSubscriptions(): Promise<GeneratedInsight[]> {
     }
   } catch (error) {
     console.error('Error detecting subscriptions:', error);
+  }
+
+  return insights;
+}
+
+/**
+ * Generate spend forecast for end of month
+ */
+async function generateSpendForecast(): Promise<GeneratedInsight[]> {
+  const insights: GeneratedInsight[] = [];
+
+  try {
+    const now = new Date();
+    const currentDay = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    
+    // Only forecast if we're at least 7 days into the month and not at the end
+    if (currentDay < 7 || currentDay >= daysInMonth - 2) {
+      return insights;
+    }
+
+    // Get spending so far this month
+    const monthStart = getStartOfMonth(now);
+    const currentSpent = await TransactionService.getTotalSpent(monthStart, now);
+
+    // Calculate daily average
+    const dailyAverage = currentSpent / currentDay;
+
+    // Forecast for end of month
+    const forecastedTotal = dailyAverage * daysInMonth;
+
+    // Get previous 3 months average
+    let previousMonthsTotal = 0;
+    for (let i = 1; i <= 3; i++) {
+      const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const prevStart = getStartOfMonth(prevMonthDate);
+      const prevEnd = getEndOfMonth(prevMonthDate);
+      const prevSpent = await TransactionService.getTotalSpent(prevStart, prevEnd);
+      previousMonthsTotal += prevSpent;
+    }
+    const previousAverage = previousMonthsTotal / 3;
+
+    // Check if forecast exceeds previous average by 20%
+    const increaseThreshold = previousAverage * 1.2;
+    if (forecastedTotal > increaseThreshold) {
+      const percentageIncrease = ((forecastedTotal - previousAverage) / previousAverage) * 100;
+      insights.push({
+        type: InsightType.SPEND_SPIKE,
+        message: `Based on your current spending, you're on track to spend ₹${(forecastedTotal / 100).toFixed(0)} this month - ${percentageIncrease.toFixed(0)}% more than your 3-month average of ₹${(previousAverage / 100).toFixed(0)}.`,
+        metadata: {
+          currentSpent,
+          forecastedTotal,
+          previousAverage,
+          percentageIncrease,
+          daysRemaining: daysInMonth - currentDay,
+        },
+      });
+    }
+
+    // Check against budgets
+    const budgets = await BudgetService.getAllBudgets();
+    const totalBudget = budgets.reduce((sum, b) => sum + b.monthlyLimit, 0);
+
+    if (totalBudget > 0 && forecastedTotal > totalBudget) {
+      const overBudget = forecastedTotal - totalBudget;
+      insights.push({
+        type: InsightType.BUDGET_OVERRUN,
+        message: `Your forecasted spending of ₹${(forecastedTotal / 100).toFixed(0)} will exceed your total monthly budget by ₹${(overBudget / 100).toFixed(0)}. Consider reducing expenses in the next ${daysInMonth - currentDay} days.`,
+        metadata: {
+          forecastedTotal,
+          totalBudget,
+          overBudget,
+          daysRemaining: daysInMonth - currentDay,
+        },
+      });
+    }
+
+    // Positive insight if spending is below average
+    if (forecastedTotal < previousAverage * 0.8) {
+      const savingsAmount = previousAverage - forecastedTotal;
+      insights.push({
+        type: InsightType.SAVING_OPPORTUNITY,
+        message: `Great job! You're on track to spend ₹${(savingsAmount / 100).toFixed(0)} less than your usual monthly spending. Keep it up!`,
+        metadata: {
+          forecastedTotal,
+          previousAverage,
+          savingsAmount,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error generating forecast:', error);
   }
 
   return insights;

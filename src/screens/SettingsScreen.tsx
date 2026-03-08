@@ -19,6 +19,7 @@ import {
 import * as EmailService from '@services/email';
 import * as SmsService from '@services/sms';
 import * as ExportService from '@services/export';
+import * as AppLockService from '@services/appLock';
 import {useAccounts} from '@hooks';
 import {Button, Card} from '@components/UI';
 import {Account} from '@types';
@@ -32,10 +33,14 @@ function SettingsScreen() {
   const [syncType, setSyncType] = useState<'email' | 'sms' | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricType, setBiometricType] = useState<string>('');
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   useEffect(() => {
     checkGmailStatus();
     checkSmsStatus();
+    checkBiometricStatus();
   }, []);
 
   const checkGmailStatus = async () => {
@@ -189,6 +194,46 @@ function SettingsScreen() {
     }
   };
 
+  const checkBiometricStatus = async () => {
+    const capability = await AppLockService.checkBiometricCapability();
+    setBiometricAvailable(capability.available);
+    if (capability.biometryType) {
+      setBiometricType(AppLockService.getBiometryTypeName(capability.biometryType));
+    }
+    const enabled = await AppLockService.isBiometricEnabled();
+    setBiometricEnabled(enabled);
+  };
+
+  const handleToggleBiometric = async () => {
+    if (biometricEnabled) {
+      Alert.alert('Disable Biometric Lock', 'Are you sure you want to disable biometric authentication?', [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Disable',
+          style: 'destructive',
+          onPress: async () => {
+            await AppLockService.disableBiometric();
+            setBiometricEnabled(false);
+            Alert.alert('Success', 'Biometric lock has been disabled');
+          },
+        },
+      ]);
+    } else {
+      const result = await AppLockService.authenticateWithBiometrics('Authenticate to enable app lock');
+      if (result.success) {
+        const enabled = await AppLockService.enableBiometric();
+        if (enabled) {
+          setBiometricEnabled(true);
+          Alert.alert('Success', 'Biometric lock has been enabled');
+        } else {
+          Alert.alert('Error', 'Failed to enable biometric lock');
+        }
+      } else {
+        Alert.alert('Authentication Failed', result.error || 'Could not authenticate');
+      }
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.section}>
@@ -267,10 +312,28 @@ function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Security</Text>
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingLabel}>App Lock</Text>
-          <Text style={styles.settingValue}>Coming Soon</Text>
-        </TouchableOpacity>
+
+        <Card style={styles.settingCard}>
+          <View style={styles.settingHeader}>
+            <View>
+              <Text style={styles.settingLabel}>Biometric Lock</Text>
+              <Text style={styles.settingSubtext}>
+                {biometricAvailable
+                  ? `${biometricType} is ${biometricEnabled ? 'enabled' : 'available'}`
+                  : 'Not available on this device'}
+              </Text>
+            </View>
+          </View>
+
+          {biometricAvailable && (
+            <Button
+              title={biometricEnabled ? 'Disable' : 'Enable'}
+              onPress={handleToggleBiometric}
+              variant={biometricEnabled ? 'secondary' : 'primary'}
+              style={styles.fullButton}
+            />
+          )}
+        </Card>
       </View>
 
       <View style={styles.section}>

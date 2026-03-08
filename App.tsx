@@ -16,6 +16,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {initializeDatabase} from '@database/db';
 import {configureGoogleSignIn} from '@services/email';
 import * as NotificationService from '@services/notifications';
+import * as BackgroundTasksService from '@services/backgroundTasks';
 import RootNavigator from '@navigation/RootNavigator';
 
 function App(): React.JSX.Element {
@@ -41,6 +42,10 @@ function App(): React.JSX.Element {
         // Schedule daily alert checks
         NotificationService.scheduleDailyAlerts();
         console.log('Daily alerts scheduled');
+        
+        // Configure background tasks
+        await BackgroundTasksService.configureBackgroundTasks();
+        console.log('Background tasks configured');
         
         setIsReady(true);
       } catch (err) {
