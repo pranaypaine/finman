@@ -6,12 +6,13 @@
 
 ---
 
-## 📊 Overall Progress: 65% Complete
+## 📊 Overall Progress: 75% Complete
 
 ### Core Features: ✅ 100% Complete
 ### Email/SMS Integration: ✅ 100% Complete  
-### AI/Insights: ⏳ 0% Complete  
-### Advanced Features: ⏳ 0% Complete
+### AI/Insights: ✅ 100% Complete  
+### Export Feature: ✅ 100% Complete
+### Advanced Features: ⏳ 25% Complete
 
 ---
 
@@ -94,6 +95,7 @@
   - AccountForm (create/edit)
   - BudgetForm (create/edit)
   - BudgetCard with progress indicators
+  - InsightCard with color-coded insight types
 
 - [x] **Custom Hooks**
   - useAccounts - Fetch and manage accounts
@@ -111,30 +113,55 @@
 - [x] **Budget Service** - Full CRUD for budgets
 - [x] **Email Service** - Gmail integration and parsing
 - [x] **SMS Service** - SMS reading and parsing
+- [x] **Insights Service** - AI-powered financial insights generation
+- [x] **Export Service** - CSV/JSON export functionality
+
+---
+
+## ✅ Recently Completed
+
+### Phase 3: AI Insights (100%)
+- [x] **Insights Screen Implementation**
+  - Display AI-generated insights in card-based UI
+  - Color-coded insight categories (spend spike, budget overrun, credit utilization, subscriptions)
+  - Pull-to-refresh functionality
+  - Generate insights button with loading state
+  - Empty state when no insights exist
+  - Insight count header
+
+- [x] **Insights Service**
+  - Spend spike detection (30% increase vs 3-month average)
+  - Budget overrun alerts (≥80% warning, ≥100% overrun)
+  - Credit utilization warnings (≥70% per card and overall)
+  - Recurring subscription detection (3+ similar transactions with <10% variance)
+  - Insights stored in ai_insights table with metadata
+  - Auto-clear old insights (30+ days)
+
+- [x] **InsightCard Component**
+  - Visual card with icon, title, message, and date
+  - 5 insight types: spend_spike, budget_overrun, credit_utilization, subscription_detected, saving_opportunity
+  - Color-coded backgrounds: orange (spend/credit), red (budget), blue (subscription), green (savings)
+  - Configurable icon mapping (📈, ⚠️, 💳, 🔄, 💰)
+
+### Phase 5.1: Export/Backup (100%)
+- [x] **Export Service**
+  - Export transactions to CSV format
+  - Export accounts to CSV format
+  - Export budgets to CSV format
+  - Full backup to JSON format (all data)
+  - Save to device storage (Downloads on Android, Documents on iOS)
+  - Permission handling for storage access
+
+- [x] **Settings UI - Export Section**
+  - Export buttons for transactions, accounts, budgets
+  - Full backup button (JSON format)
+  - Export progress indicators
+  - Success alerts with file location
+  - Open folder button (Android)
 
 ---
 
 ## ⏳ Pending Features
-
-### Phase 3: AI Insights (Priority: High)
-- [ ] **Insights Screen Implementation**
-  - Display AI-generated insights
-  - Card-based UI for insights
-  - Insight categories (spend spike, budget overrun, etc.)
-  - Refresh and filter options
-
-- [ ] **Insights Service**
-  - Spend spike detection (compare to last 3 months)
-  - Budget overrun alerts (>80% threshold)
-  - Credit utilization warnings (>70%)
-  - Recurring subscription detection
-  - Calculate financial health score
-
-- [ ] **Insights Generator**
-  - Analyze spending patterns
-  - Detect anomalies
-  - Generate actionable recommendations
-  - Store insights in ai_insights table
 
 ### Phase 4: AI Categorization (Priority: Medium)
 - [ ] **ONNX Runtime Integration**
@@ -156,12 +183,6 @@
   - Predict next payment date
   - Alert before due date
 
-- [ ] **Export/Backup**
-  - Export transactions to CSV
-  - Export budgets to CSV
-  - Export accounts to CSV
-  - JSON export for full backup
-  - Save to device storage
 
 - [ ] **Charts & Visualizations**
   - Install react-native-svg + victory-native

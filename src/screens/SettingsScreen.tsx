@@ -14,9 +14,11 @@ import {
   Modal,
   ActivityIndicator,
   Platform,
+  Linking,
 } from 'react-native';
 import * as EmailService from '@services/email';
 import * as SmsService from '@services/sms';
+import * as ExportService from '@services/export';
 import {useAccounts} from '@hooks';
 import {Button, Card} from '@components/UI';
 import {Account} from '@types';
@@ -29,6 +31,7 @@ function SettingsScreen() {
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [syncType, setSyncType] = useState<'email' | 'sms' | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     checkGmailStatus();
@@ -137,6 +140,55 @@ function SettingsScreen() {
     }
   };
 
+  const handleExport = async (type: 'transactions' | 'accounts' | 'budgets' | 'all') => {
+    setExporting(true);
+    try {
+      let path: string;
+      let filename: string;
+
+      switch (type) {
+        case 'transactions':
+          path = await ExportService.exportTransactionsCSV();
+          filename = 'transactions';
+          break;
+        case 'accounts':
+          path = await ExportService.exportAccountsCSV();
+          filename = 'accounts';
+          break;
+        case 'budgets':
+          path = await ExportService.exportBudgetsCSV();
+          filename = 'budgets';
+          break;
+        case 'all':
+          path = await ExportService.exportAllDataJSON();
+          filename = 'full backup';
+          break;
+        default:
+          throw new Error('Invalid export type');
+      }
+
+      Alert.alert(
+        'Export Successful',
+        `Your ${filename} have been exported.\n\nLocation: ${ExportService.getExportPath()}`,
+        [
+          {text: 'OK', style: 'default'},
+          {
+            text: 'Open Folder',
+            onPress: () => {
+              if (Platform.OS === 'android') {
+                Linking.openURL('content://com.android.externalstorage.documents/document/primary%3ADownload');
+              }
+            },
+          },
+        ],
+      );
+    } catch (error: any) {
+      Alert.alert('Export Failed', error.message || 'An error occurred during export');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.section}>
@@ -222,13 +274,54 @@ function SettingsScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Data</Text>
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingLabel}>Export Data</Text>
-          <Text style={styles.settingValue}>Coming Soon</Text>
-        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Data Management</Text>
+
+        <Card style={styles.settingCard}>
+          <View style={styles.settingHeader}>
+            <Text style={styles.settingLabel}>Export Data</Text>
+            <Text style={styles.settingSubtext}>
+              Export your financial data as CSV or JSON files
+            </Text>
+          </View>
+
+          <View style={styles.exportButtonGrid}>
+            <Button
+              title="Transactions"
+              onPress={() => handleExport('transactions')}
+              variant="secondary"
+              style={styles.exportButton}
+              disabled={exporting}
+            />
+            <Button
+              title="Accounts"
+              onPress={() => handleExport('accounts')}
+              variant="secondary"
+              style={styles.exportButton}
+              disabled={exporting}
+            />
+            <Button
+              title="Budgets"
+              onPress={() => handleExport('budgets')}
+              variant="secondary"
+              style={styles.exportButton}
+              disabled={exporting}
+            />
+            <Button
+              title="Full Backup"
+              onPress={() => handleExport('all')}
+              variant="primary"
+              style={styles.exportButton}
+              disabled={exporting}
+            />
+          </View>
+        </Card>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Advanced</Text>
         <TouchableOpacity style={styles.settingItem}>
           <Text style={[styles.settingLabel, styles.dangerText]}>Reset Database</Text>
+          <Text style={styles.settingValue}>Coming Soon</Text>
         </TouchableOpacity>
       </View>
 
@@ -333,6 +426,15 @@ const styles = StyleSheet.create({
   },
   fullButton: {
     marginTop: 8,
+  },
+  exportButtonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  exportButton: {
+    flex: 1,
+    minWidth: '45%',
   },
   dangerText: {
     color: '#FF3B30',
